@@ -17,7 +17,14 @@ import React from "react"
 import { ARCanvas, NFTMarker } from "react-three-arnft"
 
 ReactDOM.render(
-  <ARCanvas interpolationFactor={24}>
+  <ARCanvas 
+    interpolationFactor={24} 
+    onMarkerLost={() => {
+      console.log("Marker is lost");
+    }}
+    onMarkerFound={()=>{
+      console.log("Marker is found");
+    }}>
     <NFTMarker url={"data/marker/pinball"}>
       <mesh scale={[100, 100, 100]}>
         <boxGeometry args={[1, 1, 1]} />

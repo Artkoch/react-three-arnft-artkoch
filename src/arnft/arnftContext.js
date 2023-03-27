@@ -6,9 +6,9 @@ import React, {
   useRef,
   useState,
   useCallback,
-} from "react"
-import { useThree } from "@react-three/fiber"
-import { ARNft } from "./arnft"
+} from "react";
+import { useThree } from "@react-three/fiber";
+import { ARNft } from "./arnft";
 
 const constraints = {
   audio: false,
@@ -17,40 +17,47 @@ const constraints = {
     width: 640,
     height: 480,
   },
-}
+};
 
-const ARNftContext = createContext({})
+const ARNftContext = createContext({});
 
-const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }) => {
-  const { gl, camera } = useThree()
+const ARNftProvider = ({
+  children,
+  video,
+  interpolationFactor,
+  arEnabled,
+  onMarkerLost,
+  onMarkerFound,
+}) => {
+  const { gl, camera } = useThree();
 
-  const [arnft, setARNft] = useState(null)
+  const [arnft, setARNft] = useState(null);
 
-  const markersRef = useRef([])
-  const arnftRef = useRef()
+  const markersRef = useRef([]);
+  const arnftRef = useRef();
 
   const onLoaded = useCallback((msg) => {
-    console.log("onLoaded", msg)
+    console.log("onLoaded", msg);
 
-    setARNft(arnftRef.current)
-  }, [])
+    setARNft(arnftRef.current);
+  }, []);
 
   useEffect(() => {
     async function init() {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      video.current.srcObject = stream
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.current.srcObject = stream;
       video.current.onloadedmetadata = async (event) => {
-        console.log(event.srcElement.videoWidth)
-        console.log(event.srcElement.videoHeight)
+        console.log(event.srcElement.videoWidth);
+        console.log(event.srcElement.videoHeight);
 
-        video.current.play()
+        video.current.play();
 
-        gl.domElement.width = event.srcElement.videoWidth
-        gl.domElement.height = event.srcElement.videoHeight
+        gl.domElement.width = event.srcElement.videoWidth;
+        gl.domElement.height = event.srcElement.videoHeight;
 
-        gl.domElement.style.objectFit = "cover"
+        gl.domElement.style.objectFit = "cover";
 
-        camera.updateProjectionMatrix()
+        camera.updateProjectionMatrix();
 
         const arnft = new ARNft(
           "../data/camera_para.dat",
@@ -59,48 +66,52 @@ const ARNftProvider = ({ children, video, interpolationFactor, arEnabled }) => {
           camera,
           onLoaded,
           interpolationFactor,
-        )
+          onMarkerFound,
+          onMarkerLost
+        );
 
-        arnftRef.current = arnft
-      }
+        arnftRef.current = arnft;
+      };
     }
 
     if (arEnabled) {
-      init()
+      init();
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (!arnft) {
-      return
+      return;
     }
 
-    arnft.loadMarkers(markersRef.current)
-  }, [arnft])
+    arnft.loadMarkers(markersRef.current);
+  }, [arnft]);
 
   const value = useMemo(() => {
-    return { arnft, markersRef, arEnabled }
-  }, [arnft, markersRef, arEnabled])
+    return { arnft, markersRef, arEnabled };
+  }, [arnft, markersRef, arEnabled]);
 
-  return <ARNftContext.Provider value={value}>{children}</ARNftContext.Provider>
-}
+  return (
+    <ARNftContext.Provider value={value}>{children}</ARNftContext.Provider>
+  );
+};
 
 const useARNft = () => {
-  const arValue = useContext(ARNftContext)
-  return useMemo(() => ({ ...arValue }), [arValue])
-}
+  const arValue = useContext(ARNftContext);
+  return useMemo(() => ({ ...arValue }), [arValue]);
+};
 
 const useNftMarker = (url) => {
-  const ref = useRef()
+  const ref = useRef();
 
-  const { markersRef } = useARNft()
+  const { markersRef } = useARNft();
 
   useEffect(() => {
-    const newMarkers = [...markersRef.current, { url, root: ref.current }]
-    markersRef.current = newMarkers
-  }, [])
+    const newMarkers = [...markersRef.current, { url, root: ref.current }];
+    markersRef.current = newMarkers;
+  }, []);
 
-  return ref
-}
+  return ref;
+};
 
-export { ARNftProvider, useARNft, useNftMarker, ARNftContext }
+export { ARNftProvider, useARNft, useNftMarker, ARNftContext };

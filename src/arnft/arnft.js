@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
-import { isMobile, setMatrix } from "./utils"
+import { isMobile, setMatrix } from "./utils";
 
-const workerScript = "./js/arnft.worker.js"
+const workerScript = "./js/arnft.worker.js";
 
 export class ARNft {
   constructor(
@@ -11,79 +11,83 @@ export class ARNft {
     camera,
     onLoaded,
     interpolationFactor,
+    onMarkerFound,
+    onMarkerLost
   ) {
-    this.inputWidth = video.videoWidth
-    this.inputHeight = video.videoHeight
+    this.inputWidth = video.videoWidth;
+    this.inputHeight = video.videoHeight;
 
-    this.cameraParamUrl = cameraParamUrl
-    this.video = video
-    this.renderer = renderer
-    this.camera = camera
-    this.onLoaded = onLoaded
+    this.cameraParamUrl = cameraParamUrl;
+    this.video = video;
+    this.renderer = renderer;
+    this.camera = camera;
+    this.onLoaded = onLoaded;
 
-    this.camera.matrixAutoUpdate = false
+    this.camera.matrixAutoUpdate = false;
 
-    this.markers = []
+    this.markers = [];
 
-    this.canvasProcess = document.createElement("canvas")
-    this.contextProcess = this.canvasProcess.getContext("2d")
+    this.canvasProcess = document.createElement("canvas");
+    this.contextProcess = this.canvasProcess.getContext("2d");
 
-    this.initRenderer()
+    this.initRenderer();
 
-    this.worker = new Worker(workerScript)
-    this.worker.onmessage = (e) => this.onWorkerMessage(e)
+    this.worker = new Worker(workerScript);
+    this.worker.onmessage = (e) => this.onWorkerMessage(e);
     this.worker.postMessage({
       type: "load",
       pw: this.pw,
       ph: this.ph,
       cameraParamUrl: this.cameraParamUrl,
       interpolationFactor,
-    })
+    });
+    this.onMarkerFound = onMarkerFound;
+    this.onMarkerLost = onMarkerLost;
   }
 
   initRenderer() {
-    const pScale = 320 / Math.max(this.inputWidth, (this.inputHeight / 3) * 4)
-    const sScale = isMobile() ? window.outerWidth / this.inputWidth : 1
+    const pScale = 320 / Math.max(this.inputWidth, (this.inputHeight / 3) * 4);
+    const sScale = isMobile() ? window.outerWidth / this.inputWidth : 1;
 
-    const sw = this.inputWidth * sScale
-    const sh = this.inputHeight * sScale
+    const sw = this.inputWidth * sScale;
+    const sh = this.inputHeight * sScale;
 
-    this.w = this.inputWidth * pScale
-    this.h = this.inputHeight * pScale
+    this.w = this.inputWidth * pScale;
+    this.h = this.inputHeight * pScale;
 
-    this.pw = Math.max(this.w, (this.h / 3) * 4)
-    this.ph = Math.max(this.h, (this.w / 4) * 3)
+    this.pw = Math.max(this.w, (this.h / 3) * 4);
+    this.ph = Math.max(this.h, (this.w / 4) * 3);
 
-    this.ox = (this.pw - this.w) / 2
-    this.oy = (this.ph - this.h) / 2
+    this.ox = (this.pw - this.w) / 2;
+    this.oy = (this.ph - this.h) / 2;
 
-    this.canvasProcess.style.clientWidth = this.pw + "px"
-    this.canvasProcess.style.clientHeight = this.ph + "px"
-    this.canvasProcess.width = this.pw
-    this.canvasProcess.height = this.ph
+    this.canvasProcess.style.clientWidth = this.pw + "px";
+    this.canvasProcess.style.clientHeight = this.ph + "px";
+    this.canvasProcess.width = this.pw;
+    this.canvasProcess.height = this.ph;
 
     console.log(
       "processCanvas:",
       this.canvasProcess.width,
-      this.canvasProcess.height,
-    )
+      this.canvasProcess.height
+    );
 
-    this.renderer.setSize(sw, sh, false) // false -> do not update css styles
+    this.renderer.setSize(sw, sh, false); // false -> do not update css styles
   }
 
   loadMarkers(markers) {
-    markers.forEach((marker) => (marker.root.matrixAutoUpdate = false))
+    markers.forEach((marker) => (marker.root.matrixAutoUpdate = false));
 
-    this.markers = markers
+    this.markers = markers;
     this.worker.postMessage({
       type: "loadMarkers",
       markers: markers.map((marker) => marker.url),
-    })
+    });
   }
 
   process() {
-    this.contextProcess.fillStyle = "black"
-    this.contextProcess.fillRect(0, 0, this.pw, this.ph)
+    this.contextProcess.fillStyle = "black";
+    this.contextProcess.fillRect(0, 0, this.pw, this.ph);
     this.contextProcess.drawImage(
       this.video,
       0,
@@ -93,87 +97,89 @@ export class ARNft {
       this.ox,
       this.oy,
       this.w,
-      this.h,
-    )
+      this.h
+    );
 
-    const imageData = this.contextProcess.getImageData(0, 0, this.pw, this.ph)
+    const imageData = this.contextProcess.getImageData(0, 0, this.pw, this.ph);
     this.worker.postMessage({ type: "process", imagedata: imageData }, [
       imageData.data.buffer,
-    ])
+    ]);
   }
 
   onWorkerMessage(e) {
-    const msg = e.data
+    const msg = e.data;
     switch (msg.type) {
       case "loaded": {
-        const proj = JSON.parse(msg.proj)
-        const ratioW = this.pw / this.w
-        const ratioH = this.ph / this.h
-        const f = 2000.0
-        const n = 0.1
+        const proj = JSON.parse(msg.proj);
+        const ratioW = this.pw / this.w;
+        const ratioH = this.ph / this.h;
+        const f = 2000.0;
+        const n = 0.1;
 
-        proj[0] *= ratioW
-        proj[5] *= ratioH
-        proj[10] = -(f / (f - n))
-        proj[14] = -((f * n) / (f - n))
+        proj[0] *= ratioW;
+        proj[5] *= ratioH;
+        proj[10] = -(f / (f - n));
+        proj[14] = -((f * n) / (f - n));
 
-        setMatrix(this.camera.projectionMatrix, proj)
+        setMatrix(this.camera.projectionMatrix, proj);
 
-        this.onLoaded(msg)
-        break
+        this.onLoaded(msg);
+        break;
       }
       case "markersLoaded": {
         if (msg.end === true) {
-          console.log(msg)
+          console.log(msg);
         }
-        this.process()
-        break
+        this.process();
+        break;
       }
       case "markerInfos": {
-        this.onMarkerInfos(msg.markers)
-        break
+        this.onMarkerInfos(msg.markers);
+        break;
       }
       case "found": {
-        console.log("found", msg)
-        this.onFound(msg)
-        break
+        console.log("found", msg);
+        this.onFound(msg);
+        break;
       }
       case "lost": {
-        console.log("lost", msg)
-        this.onLost(msg)
-        break
+        console.log("lost", msg);
+        this.onLost(msg);
+        break;
       }
       case "processNext": {
-        this.process()
-        break
+        this.process();
+        break;
       }
     }
   }
 
   onMarkerInfos(markerInfos) {
-    console.log("markerInfos", markerInfos)
+    console.log("markerInfos", markerInfos);
     markerInfos.forEach((markerInfo) => {
       this.markers[markerInfo.id].root.children[0].position.x =
-        ((markerInfo.width / markerInfo.dpi) * 2.54 * 10) / 2.0
+        ((markerInfo.width / markerInfo.dpi) * 2.54 * 10) / 2.0;
       this.markers[markerInfo.id].root.children[0].position.y =
-        ((markerInfo.height / markerInfo.dpi) * 2.54 * 10) / 2.0
-    })
+        ((markerInfo.height / markerInfo.dpi) * 2.54 * 10) / 2.0;
+    });
   }
 
   onFound(msg) {
-    const matrix = JSON.parse(msg.matrixGL_RH)
-    const index = JSON.parse(msg.index)
+    const matrix = JSON.parse(msg.matrixGL_RH);
+    const index = JSON.parse(msg.index);
 
-    setMatrix(this.markers[index].root.matrix, matrix)
+    setMatrix(this.markers[index].root.matrix, matrix);
 
     this.markers.forEach((marker, i) => {
-      marker.root.visible = i === index
-    })
+      marker.root.visible = i === index;
+    });
+    this.onMarkerFound();
   }
 
   onLost(msg) {
     this.markers.forEach((marker) => {
-      marker.root.visible = false
-    })
+      marker.root.visible = false;
+    });
+    this.onMarkerLost();
   }
 }

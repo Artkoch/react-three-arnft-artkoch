@@ -2,17 +2,19 @@
 /* eslint-disable react/jsx-indent */
 /* eslint-disable react/jsx-pascal-case */
 
-import { Canvas } from "@react-three/fiber"
-import React, { useRef } from "react"
-import { ARNftProvider } from "../arnftContext"
+import { Canvas } from "@react-three/fiber";
+import React, { useRef } from "react";
+import { ARNftProvider } from "../arnftContext";
 
 const ARCanvas = ({
   arEnabled = true,
   interpolationFactor = 1,
   children,
+  onMarkerLost,
+  onMarkerFound,
   ...props
 }) => {
-  const ref = useRef()
+  const ref = useRef();
 
   return (
     <>
@@ -42,12 +44,14 @@ const ARCanvas = ({
           video={ref}
           interpolationFactor={interpolationFactor}
           arEnabled={arEnabled}
+          onMarkerLost={onMarkerLost}
+          onMarkerFound={onMarkerFound}
         >
           {children}
         </ARNftProvider>
       </Canvas>
     </>
-  )
-}
+  );
+};
 
-export default React.memo(ARCanvas)
+export default React.memo(ARCanvas);
